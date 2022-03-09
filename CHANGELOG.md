@@ -2,6 +2,7 @@
 
 -  Added tests for `get_labels_parameters` and `get_labels_data` (thanks to @psteinb, #39)
 -  Two Moons Likelihood for `log=False` fixed (thanks to @michaeldeistler, #41)
+-  Make it possible to use `fig_posterior` with custom Task objects.
 
 
 # v1.0.7

@@ -5,6 +5,7 @@ import deneb as den
 import torch
 
 import sbibm
+from sbibm.tasks.task import Task
 from sbibm.utils.io import get_ndarray_from_csv
 from sbibm.utils.torch import sample
 
@@ -46,6 +47,7 @@ def fig_posterior(
     limits: Optional[Union[List[float], str]] = None,
     num_bins: int = 40,
     scatter_size: float = 1.0,
+    task: Optional[Task] = None,
     **kwargs: Any,
 ):
     """Plots posteriors samples for given task
@@ -74,12 +76,17 @@ def fig_posterior(
             "Algorithm" / `samples_name`, in which case respective ranges are used
         num_bins: Number of bins
         scatter_size: Scatter size
+        task: Optional Task object that will take precedence over task_name when
+        resolving the Task to be used for plotting. Use this argument to create
+        posterior figures for custom tasks that are not part of `sbibm`.
 
     Returns:
         Chart
     """
     # Samples to plot
-    task = sbibm.get_task(task_name)
+    if task is None:
+        task = sbibm.get_task(task_name)
+
     samples = []
     labels_samples = []
     colors = {}
