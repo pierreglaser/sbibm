@@ -114,6 +114,7 @@ def run(
 
     inference_method = inference_class(classifier=classifier, prior=prior)
 
+    single_round_results = []
     posteriors = []
     proposal = prior
     mcmc_parameters["warmup_steps"] = 25
@@ -126,6 +127,9 @@ def run(
             num_simulations=num_simulations_per_round,
             simulation_batch_size=simulation_batch_size,
         )
+
+        if r > 0:
+            single_round_results[r-1]['posterior_samples'] = transforms.inv(theta)
 
         density_estimator = inference_method.append_simulations(
             theta, x, from_round=r
@@ -148,10 +152,19 @@ def run(
         proposal = posterior.set_default_x(observation)
         posteriors.append(posterior)
 
+        single_round_result = {"data": (transforms.inv(theta), x), "posterior": wrap_posterior(posterior, transforms)}
+        single_round_results.append(single_round_result)
+
     posterior = wrap_posterior(posteriors[-1], transforms)
 
     assert simulator.num_simulations == num_simulations
 
-    samples = posterior.sample((num_samples,)).detach()
+    if num_samples > 0:
+        samples = posterior.sample((num_samples,)).detach()
+    else:
+        samples = torch.zeros((0, task.dim_parameters))
 
-    return samples, simulator.num_simulations, None
+    if num_rounds > 0:
+        single_round_results[num_rounds - 1]['posterior_samples'] = samples
+
+    return posterior, samples, simulator.num_simulations, single_round_results

@@ -93,16 +93,21 @@ def run(
     )
 
     inference_method = inference.SNPE_C(prior, density_estimator=density_estimator_fun)
+
+    single_round_results = []
     posteriors = []
     proposal = prior
 
-    for _ in range(num_rounds):
+    for r in range(num_rounds):
         theta, x = inference.simulate_for_sbi(
             simulator,
             proposal,
             num_simulations=num_simulations_per_round,
             simulation_batch_size=simulation_batch_size,
         )
+
+        if r > 0:
+            single_round_results[r-1]['posterior_samples'] = transforms.inv(theta)
 
         density_estimator = inference_method.append_simulations(
             theta, x, proposal=proposal
@@ -121,15 +126,24 @@ def run(
         proposal = posterior.set_default_x(observation)
         posteriors.append(posterior)
 
+        single_round_result = {"data": (transforms.inv(theta), x), "posterior": wrap_posterior(posterior, transforms)}
+        single_round_results.append(single_round_result)
+
     posterior = wrap_posterior(posteriors[-1], transforms)
 
     assert simulator.num_simulations == num_simulations
 
-    samples = posterior.sample((num_samples,)).detach()
+    if num_samples > 0:
+        samples = posterior.sample((num_samples,)).detach()
+    else:
+        samples = torch.zeros((0, task.dim_parameters))
+
+    if num_rounds > 0:
+        single_round_results[num_rounds - 1]['posterior_samples'] = samples
 
     if num_observation is not None:
         true_parameters = task.get_true_parameters(num_observation=num_observation)
         log_prob_true_parameters = posterior.log_prob(true_parameters)
-        return samples, simulator.num_simulations, log_prob_true_parameters
+        return posterior, samples, simulator.num_simulations, single_round_results
     else:
-        return samples, simulator.num_simulations, None
+        return posterior, samples, simulator.num_simulations, single_round_results
