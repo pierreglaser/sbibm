@@ -3,6 +3,7 @@ import torch
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from torch.distributions.transformed_distribution import TransformedDistribution
+from torch.distributions.transforms import identity_transform
 
 from sbibm.utils.nflows import FlowWrapper
 
@@ -11,8 +12,8 @@ def wrap_prior_dist(prior_dist, transforms):
     return TransformedDistribution(prior_dist, transforms)
 
 
-def wrap_simulator_fn(simulator_fn, transforms):
-    return SimulatorWrapper(simulator_fn, transforms)
+def wrap_simulator_fn(simulator_fn, param_transforms, data_transforms=None):
+    return SimulatorWrapper(simulator_fn, param_transforms, data_transforms)
 
 
 def wrap_posterior(posterior, transforms):
@@ -20,12 +21,17 @@ def wrap_posterior(posterior, transforms):
 
 
 class SimulatorWrapper:
-    def __init__(self, simulator_fn, transforms):
+    def __init__(self, simulator_fn, param_transforms, data_transforms=None):
         self.simulator_fn = simulator_fn
-        self.transforms = transforms
+        self.param_transforms = param_transforms
+        self.data_transforms = data_transforms
 
     def __call__(self, parameters, *args, **kwargs):
-        return self.simulator_fn(self.transforms.inv(parameters))
+        ret = self.simulator_fn(self.param_transforms.inv(parameters))
+        if self.data_transforms is not None:
+            ret = self.data_transforms(ret)
+        return ret
+
 
     @property
     def num_simulations(self):
