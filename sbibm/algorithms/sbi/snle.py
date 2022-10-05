@@ -38,7 +38,7 @@ def run(
     z_score_x: bool = True,
     z_score_theta: bool = True,
     max_num_epochs: Optional[int] = None,
-) -> Tuple[torch.Tensor, int, Optional[torch.Tensor]]:
+) -> Tuple[Any, torch.Tensor, int, Any]:
     """Runs (S)NLE from `sbi`
 
     Args:
